@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body { @apply bg-surface text-onyx font-grotesk antialiased; }
+  :focus-visible { outline: 2px solid #0D0D11; outline-offset: 2px; }
+}
+
+@layer components {
+  .label-caps { @apply font-mono text-xs font-semibold uppercase tracking-wider; }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 border-[1.5px] border-onyx px-5 py-3 font-mono text-xs font-bold uppercase tracking-wider
+           transition-all duration-100 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary { @apply btn bg-lime text-onyx shadow-tactile hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-tactile-sm; }
+  /* Stitch sets light text on coral (3.1:1). Onyx on coral is 5.9:1, so the label stays onyx. */
+  .btn-coral { @apply btn bg-coral text-onyx shadow-tactile hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-tactile-sm; }
+  .btn-ghost { @apply btn border bg-transparent text-onyx hover:bg-onyx hover:text-lime; }
+
+  .field { @apply block w-full border border-onyx bg-surface-muted px-3 py-3 font-grotesk text-[15px] text-onyx placeholder:font-mono placeholder:text-sm placeholder:text-ink-muted
+                  focus:border-2 focus:bg-surface focus:shadow-focus-lime focus:outline-none; }
+  .field-error { @apply border-2 border-coral-dark; }
+
+  .card { @apply border-[1.5px] border-onyx bg-surface; }
+  .sticker { @apply inline-block border border-onyx bg-lime px-2 py-1 font-mono text-xs font-bold uppercase tracking-wider text-onyx; }
+}
+@layer components {
+  .chip { @apply border border-onyx bg-surface px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-wider hover:bg-lime-muted disabled:cursor-not-allowed disabled:opacity-40; }
+  .chip-on { @apply bg-lime shadow-tactile-sm hover:bg-lime; }
+}
