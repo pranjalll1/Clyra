@@ -81,6 +81,8 @@ export function toDto(e) {
     registrationOpensAt: e.registrationOpensAt,
     registrationClosesAt: e.registrationClosesAt,
     price: e.price,
+        registrationPaused: !!e.registrationPaused,
+    registeredCount: e.registeredCount ?? 0,
     rejectionNote: e.rejectionNote ?? null,
     updatedAt: e.updatedAt,
   };
@@ -95,7 +97,7 @@ export const listQuerySchema = z.object({
   mode: z.enum(['in_person', 'online', 'hybrid']).optional(),
   venueType: z.enum(['auditorium', 'sports', 'hub', 'academic']).optional(),
   when: z.enum(['all', 'today', 'weekend', 'week']).default('all'),
-  sort: z.enum(['soonest', 'newest']).default('soonest'),
+   sort: z.enum(['soonest', 'newest', 'popular']).default('soonest'),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(24).default(12),
 });

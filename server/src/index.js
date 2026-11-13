@@ -9,6 +9,7 @@ import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import catalogRoutes from './routes/catalog.js';
 import { eventRouter, organizerRouter } from './routes/events.js';
+import { adminRouter } from './routes/admin.js';
 
 const app = express();
 app.use(helmet());
@@ -24,6 +25,8 @@ app.use('/api/v1/users', userRoutes);
 app.use('/api/v1', catalogRoutes);
 app.use('/api/v1/events', eventRouter);
 app.use('/api/v1/organizer', organizerRouter);
+
+app.use('/api/v1/admin', adminRouter);
 
 app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
 // eslint-disable-next-line no-unused-vars

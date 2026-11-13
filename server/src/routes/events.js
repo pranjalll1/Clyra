@@ -6,6 +6,8 @@ import { requireAuth, requireRole, optionalAuth } from '../middleware/auth.js';
 import Registration from '../models/Registration.js';
 import Category from '../models/Category.js';
 import User from '../models/User.js';
+import { z } from 'zod';
+import { checkVenueClash, conflictDto } from '../utils/clash.js';
 
 import {
   createSchema, patchSchema, fieldErrors, crossChecks, completeness, toDto,
@@ -58,7 +60,9 @@ eventRouter.get('/', async (req, res, next) => {
     const slugs = category ? category.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 10) : [];
     if (slugs.length) filter.categoryId = { $in: await Category.find({ slug: { $in: slugs } }).distinct('_id') };
 
-    const order = sort === 'newest' ? { createdAt: -1, _id: -1 } : { startAt: 1, _id: 1 };
+        const order = sort === 'newest' ? { createdAt: -1, _id: -1 }
+      : sort === 'popular' ? { registeredCount: -1, startAt: 1, _id: 1 }
+      : { startAt: 1, _id: 1 };
 
     const [items, total, grouped, categories] = await Promise.all([
       Event.find(filter).sort(order).skip((page - 1) * limit).limit(limit)
@@ -377,32 +381,50 @@ eventRouter.patch('/:id', guard, async (req, res, next) => {
     res.json({ event: toDto(event), completeness: completeness(event) });
   } catch (err) { next(err); }
 });
-
-organizerRouter.get('/events', guard, async (req, res, next) => {
+// Organizer submits a complete draft (or a fixed rejected event) for admin review.
+eventRouter.post('/:id/submit', guard, async (req, res, next) => {
   try {
-    const orgIds = await orgIdsFor(req.user);
-    const scope = req.user.role === 'admin'
-      ? { archivedAt: null }
-      : { archivedAt: null, $or: [{ organizationId: { $in: orgIds } }, { createdBy: req.user._id }] };
-
-    const filter = { ...scope };
-    if (req.query.status && req.query.status !== 'all') filter.status = String(req.query.status);
-    const q = String(req.query.q || '').trim().slice(0, 80);
-    if (q) {
-      const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-      filter.$and = [{ $or: [{ title: rx }, { shortCode: rx }] }];
+    const event = await loadManaged(req, res);
+    if (!event) return;
+    if (!EDITABLE.includes(event.status)) {
+      return res.status(409).json({ error: 'This event is already submitted or published', code: 'NOT_EDITABLE' });
     }
-    const page = Math.max(1, Number(req.query.page) || 1);
-    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
 
-    const [items, total, grouped] = await Promise.all([
-      Event.find(filter).sort('-updatedAt').skip((page - 1) * limit).limit(limit).populate('venueId', 'name').populate('categoryId', 'name'),
-      Event.countDocuments(filter),
-      Event.aggregate([{ $match: scope }, { $group: { _id: '$status', n: { $sum: 1 } } }]),
-    ]);
+    // Same rule the form's "Required 4/6" counter uses.
+    const progress = completeness(event);
+    if (progress.missing.length) {
+      return res.status(400).json({ error: `Finish these first: ${progress.missing.join(', ')}`, code: 'INCOMPLETE', missing: progress.missing });
+    }
 
-    const counts = { all: 0 };
-    for (const g of grouped) { counts[g._id] = g.n; counts.all += g.n; }
-    res.json({ items: items.map(toDto), total, page, limit, counts });
+    const venue = await Venue.findById(event.venueId);
+    const fields = crossChecks(event.toObject(), venue);
+    if (event.startAt <= new Date()) fields.startAt = ['The start must be in the future'];
+    if (Object.keys(fields).length) return res.status(400).json({ error: 'Check the highlighted fields', fields });
+
+    // Module 3: refuse when another published or pending event already holds this venue at this time.
+    const clash = await checkVenueClash({
+      venueId: event.venueId,
+      startAt: event.startAt,
+      endAt: event.endAt,
+      excludeId: event._id,
+    });
+    if (clash.clash) {
+      return res.status(409).json({
+        error: `${clash.venueName} is already booked at that time. Change the venue or the time.`,
+        code: 'VENUE_CLASH',
+        conflicts: clash.overlaps.map(conflictDto),
+      });
+    }
+
+    // Atomic: only moves forward if it is still a draft/rejected event, so a double click cannot submit twice.
+    const updated = await Event.findOneAndUpdate(
+      { _id: event._id, status: { $in: EDITABLE } },
+      { $set: { status: 'pending', submittedAt: new Date() } },
+      { new: true }
+    );
+    if (!updated) {
+      return res.status(409).json({ error: 'This event was already submitted', code: 'NOT_EDITABLE' });
+    }
+    res.json({ event: toDto(updated), completeness: completeness(updated) });
   } catch (err) { next(err); }
 });

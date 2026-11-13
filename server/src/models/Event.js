@@ -44,6 +44,8 @@ const eventSchema = new Schema(
     rejectionNote: String,
     conflictOverride: { by: { type: Schema.Types.ObjectId, ref: 'User' }, reason: String, at: Date, _id: false },
     registrationPaused: { type: Boolean, default: false },
+    cancelledAt: { type: Date, default: null },
+    cancelReason: { type: String, default: null, maxlength: 300 },
     archivedAt: { type: Date, default: null },
   },
   { timestamps: true }

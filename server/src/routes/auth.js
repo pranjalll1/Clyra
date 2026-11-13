@@ -5,6 +5,9 @@ import { z } from 'zod';
 import User from '../models/User.js';
 import { config } from '../config.js';
 import { sendVerificationEmail } from '../utils/mailer.js';
+import { sendMail } from '../utils/sendMail.js';
+import { strongPassword } from '../utils/password.js';
+import { requireHuman } from '../utils/turnstile.js';
 import { COOKIE, cookieOptions, signToken } from '../middleware/auth.js';
 
 const router = Router();
@@ -14,7 +17,7 @@ const emailSchema = z.string().trim().toLowerCase().email();
 const registerSchema = z.object({
   name: z.string().trim().min(2).max(80),
   email: emailSchema,
-  password: z.string().min(8, 'Use at least 8 characters').max(72),
+  password: strongPassword,
 });
 
 const fieldErrors = (err) => err.flatten().fieldErrors;
@@ -29,7 +32,7 @@ async function issueVerification(user) {
   await sendVerificationEmail(user.email, user.name, link);
 }
 
-router.post('/register', async (req, res, next) => {
+router.post('/register', requireHuman, async (req, res, next) => {
   try {
     const parsed = registerSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Check the highlighted fields', fields: fieldErrors(parsed.error) });
@@ -81,7 +84,7 @@ router.post('/resend-verification', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post('/login', async (req, res, next) => {
+router.post('/login', requireHuman, async (req, res, next) => {
   try {
     const parsed = z.object({ email: emailSchema, password: z.string().min(1) }).safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Enter your email and password' });
@@ -95,6 +98,49 @@ router.post('/login', async (req, res, next) => {
 
     res.cookie(COOKIE, signToken(user), cookieOptions);
     res.json({ user: user.toPublic() });
+  } catch (err) { next(err); }
+});
+
+// Always answers 200 (same text whether or not the account exists). The link expires in 1 hour.
+router.post('/forgot-password', requireHuman, async (req, res, next) => {
+  try {
+    const email = emailSchema.safeParse(req.body?.email);
+    if (email.success) {
+      const user = await User.findOne({ email: email.data });
+      if (user) {
+        const token = crypto.randomBytes(32).toString('hex');
+        user.resetTokenHash = sha256(token);
+        user.resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000);
+        await user.save();
+        await sendMail({
+          to: user.email,
+          subject: 'Reset your Clyra password',
+          text: `Hi ${user.name},\n\nUse this link to choose a new password. It works once and expires in 1 hour:\n${config.clientUrl}/reset-password?token=${token}\n\nIf you did not ask for this, ignore this email. Your password stays the same.`,
+        });
+      }
+    }
+    res.json({ message: 'If an account exists for that email, a reset link has been sent.' });
+  } catch (err) { next(err); }
+});
+
+router.post('/reset-password', async (req, res, next) => {
+  try {
+    const parsed = z.object({ token: z.string().min(10), password: strongPassword }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'Check the highlighted fields', fields: fieldErrors(parsed.error) });
+
+    const user = await User.findOne({
+      resetTokenHash: sha256(parsed.data.token),
+      resetTokenExpires: { $gt: new Date() },
+    }).select('+resetTokenHash +resetTokenExpires');
+    if (!user) return res.status(400).json({ error: 'This reset link is invalid or has expired', code: 'INVALID_TOKEN' });
+
+    user.passwordHash = await bcrypt.hash(parsed.data.password, 12);
+    user.passwordChangedAt = new Date();
+    user.resetTokenHash = undefined;
+    user.resetTokenExpires = undefined;
+    if (!user.emailVerifiedAt) user.emailVerifiedAt = new Date(); // they proved they control the inbox
+    await user.save();
+    res.json({ message: 'Password updated. You can sign in with the new password.' });
   } catch (err) { next(err); }
 });
 

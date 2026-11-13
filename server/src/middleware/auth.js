@@ -21,8 +21,11 @@ export async function requireAuth(req, res, next) {
   try {
     const token = req.cookies?.[COOKIE];
     if (!token) return res.status(401).json({ error: 'Sign in required', code: 'UNAUTHENTICATED' });
-    const { sub } = jwt.verify(token, config.jwtSecret);
-    const user = await User.findById(sub);
+   const { sub, iat } = jwt.verify(token, config.jwtSecret);
+const user = await User.findById(sub);
+if (user?.passwordChangedAt && iat * 1000 < user.passwordChangedAt.getTime()) {
+  return res.status(401).json({ error: 'Sign in required', code: 'UNAUTHENTICATED' });
+}
     if (!user || !user.emailVerifiedAt) {
       return res.status(401).json({ error: 'Sign in required', code: 'UNAUTHENTICATED' });
     }
