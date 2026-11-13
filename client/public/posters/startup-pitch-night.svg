@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="800" height="450" role="img" aria-label="Startup Pitch Night">
+  <rect width="800" height="450" fill="#CCFF00"/>
+  <rect x="520" y="360" width="44" height="90" fill="#0D0D11" opacity="0.55"/>
+  <rect x="580" y="300" width="44" height="150" fill="#0D0D11" opacity="0.55"/>
+  <rect x="640" y="240" width="44" height="210" fill="#0D0D11" opacity="0.55"/>
+  <rect x="700" y="170" width="44" height="280" fill="#0D0D11" opacity="0.55"/>
+  <rect x="48" y="164" width="704" height="178" fill="#0D0D11"/>
+  <rect x="40" y="156" width="704" height="178" fill="#F8F7F4" stroke="#0D0D11" stroke-width="4"/>
+  <text x="70" y="237" font-size="44" fill="#0D0D11" font-family="Arial Black, Impact, Helvetica, Arial, sans-serif" font-weight="900">Startup Pitch</text> <text x="70" y="291" font-size="44" fill="#0D0D11" font-family="Arial Black, Impact, Helvetica, Arial, sans-serif" font-weight="900">Night</text>
+  <rect x="40" y="34" width="120" height="38" fill="#F8F7F4" stroke="#0D0D11" stroke-width="3"/>
+  <text x="52" y="60" font-size="18" fill="#0D0D11" font-family="Courier New, monospace" font-weight="700">BUSINESS</text>
+  <text x="744" y="425" font-size="16" fill="#0D0D11" text-anchor="end" font-family="Courier New, monospace" font-weight="700">CLYRA · LPU</text>
+</svg>

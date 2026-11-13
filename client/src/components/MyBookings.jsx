@@ -25,7 +25,7 @@ function Ticket({ item, user, active }) {
     <article className="card shadow-tactile-lg">
       <div className="border-b-[1.5px] border-onyx bg-onyx p-6 text-surface">
         <p className="font-mono text-xs font-bold uppercase tracking-wider text-lime">
-          {active ? 'Pass active' : 'Event ended'} // {item.ticketCode}
+                  {e.status === 'cancelled' ? 'Event cancelled' : active ? 'Pass active' : 'Event ended'} // {item.ticketCode}
         </p>
         <h2 className="mt-3 break-words font-syne text-3xl font-extrabold leading-none tracking-tight md:text-5xl">{e.title}</h2>
         {e.organizationName && <p className="mt-3 font-mono text-xs uppercase tracking-wider text-surface/70">{e.organizationName}</p>}
@@ -64,11 +64,13 @@ function Ticket({ item, user, active }) {
         </div>
       </div>
 
-      <div className="border-t-[1.5px] border-onyx p-4">
-        <Link href={`/events/${e.slug}`} className="font-mono text-xs font-bold uppercase tracking-wider underline underline-offset-4">
-          View event page{active ? ' or cancel' : ''} →
-        </Link>
-      </div>
+           {e.status !== 'cancelled' && (
+        <div className="border-t-[1.5px] border-onyx p-4">
+          <Link href={`/events/${e.slug}`} className="font-mono text-xs font-bold uppercase tracking-wider underline underline-offset-4">
+            View event page{active ? ' or cancel' : ''} →
+          </Link>
+        </div>
+      )}
     </article>
   );
 }
@@ -171,8 +173,18 @@ export default function MyBookings() {
         </div>
 
         {/* RIGHT: selected ticket */}
-        <div>{selected && <Ticket item={selected} user={user} active={tab === 'upcoming'} />}</div>
-      </div>
-    </section>
-  );
+<div>
+  {selected && (
+    <Ticket
+      item={selected}
+      user={user}
+      active={tab === 'upcoming' && selected.event.status === 'published'}
+    />
+  )}
+</div>
+
+</div> {/* Close grid container */}
+
+</section>
+);
 }

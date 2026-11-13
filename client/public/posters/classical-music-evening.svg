@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="800" height="450" role="img" aria-label="Classical Music Evening">
+  <rect width="800" height="450" fill="#FF4D2D"/>
+  <circle cx="650" cy="110" r="210" fill="none" stroke="#0D0D11" stroke-width="10" opacity="0.5"/>
+  <circle cx="650" cy="110" r="160" fill="none" stroke="#0D0D11" stroke-width="10" opacity="0.5"/>
+  <circle cx="650" cy="110" r="110" fill="none" stroke="#0D0D11" stroke-width="10" opacity="0.5"/>
+  <circle cx="650" cy="110" r="60" fill="none" stroke="#0D0D11" stroke-width="10" opacity="0.5"/>
+  <rect x="48" y="164" width="704" height="178" fill="#0D0D11"/>
+  <rect x="40" y="156" width="704" height="178" fill="#F8F7F4" stroke="#0D0D11" stroke-width="4"/>
+  <text x="70" y="237" font-size="44" fill="#0D0D11" font-family="Arial Black, Impact, Helvetica, Arial, sans-serif" font-weight="900">Classical Music</text> <text x="70" y="291" font-size="44" fill="#0D0D11" font-family="Arial Black, Impact, Helvetica, Arial, sans-serif" font-weight="900">Evening</text>
+  <rect x="40" y="34" width="144" height="38" fill="#CCFF00" stroke="#0D0D11" stroke-width="3"/>
+  <text x="52" y="60" font-size="18" fill="#0D0D11" font-family="Courier New, monospace" font-weight="700">LIVE MUSIC</text>
+  <text x="744" y="425" font-size="16" fill="#F8F7F4" text-anchor="end" font-family="Courier New, monospace" font-weight="700">CLYRA · LPU</text>
+</svg>

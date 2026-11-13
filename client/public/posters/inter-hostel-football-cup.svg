@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="800" height="450" role="img" aria-label="Inter-Hostel Football Cup">
+  <rect width="800" height="450" fill="#0D0D11"/>
+  <polygon points="-280,450 -250,450 50,0 20,0" fill="#FF4D2D" opacity="0.35"/>
+  <polygon points="-210,450 -180,450 120,0 90,0" fill="#FF4D2D" opacity="0.35"/>
+  <polygon points="-140,450 -110,450 190,0 160,0" fill="#FF4D2D" opacity="0.35"/>
+  <polygon points="-70,450 -40,450 260,0 230,0" fill="#FF4D2D" opacity="0.35"/>
+  <polygon points="0,450 30,450 330,0 300,0" fill="#FF4D2D" opacity="0.35"/>
+  <polygon points="70,450 100,450 400,0 370,0" fill="#FF4D2D" opacity="0.35"/>
+  <polygon points="140,450 170,450 470,0 440,0" fill="#FF4D2D" opacity="0.35"/>
+  <polygon points="210,450 240,450 540,0 510,0" fill="#FF4D2D" opacity="0.35"/>
+  <polygon points="280,450 310,450 610,0 580,0" fill="#FF4D2D" opacity="0.35"/>
+  <polygon points="350,450 380,450 680,0 650,0" fill="#FF4D2D" opacity="0.35"/>
+  <polygon points="420,450 450,450 750,0 720,0" fill="#FF4D2D" opacity="0.35"/>
+  <polygon points="490,450 520,450 820,0 790,0" fill="#FF4D2D" opacity="0.35"/>
+  <polygon points="560,450 590,450 890,0 860,0" fill="#FF4D2D" opacity="0.35"/>
+  <polygon points="630,450 660,450 960,0 930,0" fill="#FF4D2D" opacity="0.35"/>
+  <polygon points="700,450 730,450 1030,0 1000,0" fill="#FF4D2D" opacity="0.35"/>
+  <polygon points="770,450 800,450 1100,0 1070,0" fill="#FF4D2D" opacity="0.35"/>
+  <polygon points="840,450 870,450 1170,0 1140,0" fill="#FF4D2D" opacity="0.35"/>
+  <polygon points="910,450 940,450 1240,0 1210,0" fill="#FF4D2D" opacity="0.35"/>
+  <rect x="48" y="164" width="704" height="178" fill="#0D0D11"/>
+  <rect x="40" y="156" width="704" height="178" fill="#F8F7F4" stroke="#0D0D11" stroke-width="4"/>
+  <text x="70" y="237" font-size="44" fill="#0D0D11" font-family="Arial Black, Impact, Helvetica, Arial, sans-serif" font-weight="900">Inter-Hostel</text> <text x="70" y="291" font-size="44" fill="#0D0D11" font-family="Arial Black, Impact, Helvetica, Arial, sans-serif" font-weight="900">Football Cup</text>
+  <rect x="40" y="34" width="96" height="38" fill="#CCFF00" stroke="#0D0D11" stroke-width="3"/>
+  <text x="52" y="60" font-size="18" fill="#0D0D11" font-family="Courier New, monospace" font-weight="700">SPORTS</text>
+  <text x="744" y="425" font-size="16" fill="#F8F7F4" text-anchor="end" font-family="Courier New, monospace" font-weight="700">CLYRA · LPU</text>
+</svg>

@@ -82,6 +82,7 @@ export default function EventsExplorer() {
           <select className="field" value={sort} onChange={(e) => setParams({ sort: e.target.value === 'soonest' ? '' : e.target.value })}>
             <option value="soonest">Sort: Soonest first</option>
             <option value="newest">Sort: Newly added</option>
+                        <option value="popular">Sort: Most popular</option>
           </select>
         </label>
       </div>

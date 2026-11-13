@@ -1,12 +1,18 @@
 'use client';
-import { useState } from 'react';
+import Link from 'next/link';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, ApiError } from '@/lib/api';
+import { isStrongPassword } from '@/lib/passwordRules';
+import PasswordChecklist from './PasswordChecklist';
+import CaptchaBox, { CAPTCHA_ENABLED } from './CaptchaBox';
 
 export default function AuthForm({ initialTab }) {
   const router = useRouter();
+  const captchaRef = useRef(null);
   const [tab, setTab] = useState(initialTab);
   const [values, setValues] = useState({ name: '', email: '', password: '' });
+  const [token, setToken] = useState('');
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState(null); // { kind: 'error' | 'ok', text }
   const [needsVerify, setNeedsVerify] = useState(false);
@@ -21,14 +27,23 @@ export default function AuthForm({ initialTab }) {
 
   async function submit(e) {
     e.preventDefault();
-    setBusy(true); setErrors({}); setMessage(null); setNeedsVerify(false);
+    setErrors({}); setMessage(null); setNeedsVerify(false);
+    if (isRegister && !isStrongPassword(values.password)) {
+      setErrors({ password: ['Meet every requirement listed below the field'] });
+      return;
+    }
+    if (CAPTCHA_ENABLED && !token) {
+      setMessage({ kind: 'error', text: 'Complete the verification check first.' });
+      return;
+    }
+    setBusy(true);
     try {
       if (isRegister) {
-        const res = await api('/auth/register', { method: 'POST', body: values });
+        const res = await api('/auth/register', { method: 'POST', body: { ...values, turnstileToken: token } });
         setMessage({ kind: 'ok', text: res.message });
         setNeedsVerify(true);
       } else {
-        await api('/auth/login', { method: 'POST', body: { email: values.email, password: values.password } });
+        await api('/auth/login', { method: 'POST', body: { email: values.email, password: values.password, turnstileToken: token } });
         router.push('/');
         router.refresh();
       }
@@ -39,6 +54,8 @@ export default function AuthForm({ initialTab }) {
       if (err.code === 'EMAIL_NOT_VERIFIED') setNeedsVerify(true);
     } finally {
       setBusy(false);
+      captchaRef.current?.reset(); // a Turnstile token can be used only once
+      setToken('');
     }
   }
 
@@ -85,13 +102,18 @@ export default function AuthForm({ initialTab }) {
           {err('email') && <p id="email-err" className="mt-1 text-sm font-semibold text-coral-dark">{err('email')}</p>}
         </div>
         <div>
-          <label htmlFor="password" className="label-caps">Password</label>
+          <div className="flex items-baseline justify-between">
+            <label htmlFor="password" className="label-caps">Password</label>
+            {!isRegister && <Link href="/forgot-password" className="text-sm font-semibold underline underline-offset-2">Forgot password?</Link>}
+          </div>
           <input id="password" type="password" className={`field mt-2 ${err('password') ? 'field-error' : ''}`} value={values.password} onChange={set('password')}
-            autoComplete={isRegister ? 'new-password' : 'current-password'} required minLength={isRegister ? 8 : undefined}
+            autoComplete={isRegister ? 'new-password' : 'current-password'} required
             aria-invalid={!!err('password')} aria-describedby={err('password') ? 'password-err' : undefined} />
-          {isRegister && !err('password') && <p className="mt-1 text-sm text-ink-muted">At least 8 characters.</p>}
           {err('password') && <p id="password-err" className="mt-1 text-sm font-semibold text-coral-dark">{err('password')}</p>}
+          {isRegister && <PasswordChecklist password={values.password} />}
         </div>
+
+        <CaptchaBox ref={captchaRef} onToken={setToken} />
 
         <div aria-live="polite">
           {message && (

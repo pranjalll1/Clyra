@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="800" height="450" role="img" aria-label="Resume and Interview Workshop">
+  <rect width="800" height="450" fill="#CCFF00"/>
+  <rect x="560" y="-40" width="140" height="220" fill="#FF4D2D" transform="rotate(25 630 70)"/>
+  <rect x="-30" y="350" width="220" height="120" fill="#0D0D11" transform="rotate(-12 80 410)"/>
+  <rect x="48" y="137" width="704" height="232" fill="#0D0D11"/>
+  <rect x="40" y="129" width="704" height="232" fill="#F8F7F4" stroke="#0D0D11" stroke-width="4"/>
+  <text x="70" y="210" font-size="44" fill="#0D0D11" font-family="Arial Black, Impact, Helvetica, Arial, sans-serif" font-weight="900">Resume and</text> <text x="70" y="264" font-size="44" fill="#0D0D11" font-family="Arial Black, Impact, Helvetica, Arial, sans-serif" font-weight="900">Interview</text> <text x="70" y="318" font-size="44" fill="#0D0D11" font-family="Arial Black, Impact, Helvetica, Arial, sans-serif" font-weight="900">Workshop</text>
+  <rect x="40" y="34" width="120" height="38" fill="#F8F7F4" stroke="#0D0D11" stroke-width="3"/>
+  <text x="52" y="60" font-size="18" fill="#0D0D11" font-family="Courier New, monospace" font-weight="700">WORKSHOP</text>
+  <text x="744" y="425" font-size="16" fill="#0D0D11" text-anchor="end" font-family="Courier New, monospace" font-weight="700">CLYRA · LPU</text>
+</svg>

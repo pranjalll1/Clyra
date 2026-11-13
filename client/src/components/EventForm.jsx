@@ -18,6 +18,8 @@ const toInput = (iso) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 const toIso = (v) => (v ? new Date(v).toISOString() : null);
+const rangeFmt = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+const formatRange = (a, b) => `${rangeFmt.format(new Date(a))} to ${rangeFmt.format(new Date(b))}`;
 
 const fromDto = (e) => ({
   title: e.title, organizationId: e.organizationId, categoryId: e.categoryId || '', description: e.description || '', mode: e.mode,
@@ -57,6 +59,9 @@ export default function EventForm({ eventId }) {
   const [progress, setProgress] = useState({ done: 0, total: 6, missing: [] });
   const [status, setStatus] = useState(eventId ? 'loading' : 'idle'); // loading | idle | dirty | saving | saved | error | notfound
   const [info, setInfo] = useState({ code: '', status: 'draft', rejectionNote: null });
+    const [submitting, setSubmitting] = useState(false);
+  const [submitMsg, setSubmitMsg] = useState('');
+    const [slot, setSlot] = useState(null); // null | { checking: true } | { clash, conflicts }
   const dirty = useRef(false);
   const timer = useRef(null);
 
@@ -88,22 +93,60 @@ export default function EventForm({ eventId }) {
   const formRef = useRef(form);
   formRef.current = form;
 
-  async function save() {
+   async function save() {
     clearTimeout(timer.current);
     setStatus('saving'); setErrors({});
     try {
       if (!eventId) {
         const { event } = await api('/events', { method: 'POST', body: toPayload(formRef.current, { create: true }) });
         router.replace(`/organizer/events/${event.id}`);
-        return;
+        return true;
       }
       const { completeness } = await api(`/events/${eventId}`, { method: 'PATCH', body: toPayload(formRef.current, { create: false }) });
       setProgress(completeness); dirty.current = false; setStatus('saved');
+      return true;
     } catch (err) {
       setStatus('error');
       if (err instanceof ApiError) setErrors(err.fields);
+      return false;
     }
   }
+
+  // Saves any pending edits first, then asks the server to move the event to "pending_approval".
+  async function submitForApproval() {
+    setSubmitMsg('');
+    if (dirty.current && !(await save())) {
+      setSubmitMsg('Fix the highlighted fields before submitting.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { event } = await api(`/events/${eventId}/submit`, { method: 'POST' });
+      setInfo((i) => ({ ...i, status: event.status, rejectionNote: null }));
+    } catch (e) {
+      setSubmitMsg(e.message);
+      if (e instanceof ApiError) setErrors(e.fields);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+    // Live venue check: runs 600 ms after the venue or the times stop changing.
+  const vId = form.venueId;
+  const sAt = form.startAt;
+  const eAt = form.endAt;
+  useEffect(() => {
+    if (!vId || !sAt || !eAt || new Date(eAt) <= new Date(sAt)) { setSlot(null); return undefined; }
+    let cancelled = false;
+    setSlot({ checking: true });
+    const t = setTimeout(() => {
+      const qs = new URLSearchParams({ startAt: toIso(sAt), endAt: toIso(eAt) });
+      if (eventId) qs.set('excludeEventId', eventId);
+      api(`/venues/${vId}/clash-check?${qs}`)
+        .then((r) => { if (!cancelled) setSlot(r); })
+        .catch(() => { if (!cancelled) setSlot(null); });
+    }, 600);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [vId, sAt, eAt, eventId]);
 
   const venue = venues.find((v) => v.id === form.venueId);
   const err = (k) => errors[k]?.[0];
@@ -128,6 +171,10 @@ export default function EventForm({ eventId }) {
         {info.status === 'rejected' && info.rejectionNote && (
           <p className="mt-4 border-[1.5px] border-onyx bg-coral-light px-3 py-2 text-sm font-semibold text-coral-dark">Rejected by admin: {info.rejectionNote}</p>
         )}
+                {info.status === 'pending_approval' && (
+          <p className="mt-4 border-[1.5px] border-onyx bg-lime-muted px-3 py-2 text-sm font-semibold">Submitted. An admin is reviewing this event, so editing is locked until they decide.</p>
+        )}
+        {submitMsg && <p role="alert" className="mt-4 border-[1.5px] border-onyx bg-coral-light px-3 py-2 text-sm font-semibold text-coral-dark">{submitMsg}</p>}
         {!eventId && <p className="mt-3 text-[15px] text-ink-muted">Start with a title. Save the draft, then fill in the rest; changes save automatically.</p>}
 
         <form onSubmit={(e) => { e.preventDefault(); save(); }} noValidate className="mt-8 space-y-10">
@@ -180,6 +227,19 @@ export default function EventForm({ eventId }) {
               </div>
             )}
           </fieldset>
+                      {slot?.checking && <p className="text-sm text-ink-muted">Checking venue availability...</p>}
+            {slot && !slot.checking && (slot.clash ? (
+              <div role="alert" className="border-[1.5px] border-onyx bg-coral-light p-3 text-sm">
+                <p className="font-bold text-coral-dark">Venue clash: this venue is already booked at that time.</p>
+                <ul className="mt-2 space-y-1">
+                  {slot.conflicts.map((c) => (
+                    <li key={c.id}>{c.title} ({c.status === 'published' ? 'Published' : 'Pending review'}), {formatRange(c.startAt, c.endAt)}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p className="border-[1.5px] border-onyx bg-lime-muted p-3 text-sm font-semibold">This venue is free at that time.</p>
+            ))}
 
           <fieldset className="card space-y-5 p-5 shadow-tactile">
             <legend className="sticker -ml-1">Registration</legend>
@@ -206,7 +266,7 @@ export default function EventForm({ eventId }) {
               </label>
               {!form.isFree && (
                 <Field id="amountINR" error={err('amountINR')} label="Price shown to students (₹)" hint="Display only. Payments are not handled by Clyra.">
-                  <input id="amountINR" type="number" min="0" className={cls('amountINR')} value={form.amountINR} onChange={set('amountINR')} />
+                 <input id="amountINR" type="number" min="0" className={cls('amountINR')} value={form.amountINR} onChange={set('amountINR')} disabled={!editable && !!eventId} />
                 </Field>
               )}
             </div>
@@ -216,14 +276,44 @@ export default function EventForm({ eventId }) {
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t-2 border-onyx bg-surface">
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-6">
-          <p aria-live="polite" className="font-mono text-xs font-semibold uppercase tracking-wider">
+          <p
+            aria-live="polite"
+            className="font-mono text-xs font-semibold uppercase tracking-wider"
+          >
             Required {progress.done}/{progress.total} &middot; {statusText}
           </p>
+
           <div className="flex items-center gap-3">
-            <button type="button" onClick={save} disabled={status === 'saving' || (!editable && !!eventId) || (!eventId && (!form.title.trim() || !form.organizationId))} className="btn-ghost">
+            <button
+              type="button"
+              onClick={save}
+              disabled={
+                status === 'saving' ||
+                (!editable && !!eventId) ||
+                (!eventId && (!form.title.trim() || !form.organizationId))
+              }
+              className="btn-ghost"
+            >
               {eventId ? 'Save now' : 'Save draft'}
             </button>
-            <button type="button" disabled className="btn-primary" title="Submitting for approval arrives with the clash checks">Submit for approval</button>
+
+            <button
+              type="button"
+              onClick={submitForApproval}
+              disabled={!eventId || !editable || submitting || status === 'saving' || progress.done < progress.total || !!slot?.clash}
+              title={
+                progress.done < progress.total
+                  ? 'Complete all 6 required fields first'
+                  : undefined
+              }
+              className="btn-primary"
+            >
+              {info.status === 'pending_approval'
+                ? 'Under review'
+                : submitting
+                  ? 'Submitting...'
+                  : 'Submit for approval'}
+            </button>
           </div>
         </div>
       </div>
