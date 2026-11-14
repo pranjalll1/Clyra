@@ -156,8 +156,8 @@ export default function OrganizerDashboard() {
     </section>
   );
 }
-"use client";
-import { toast } from "sonner";
+
+
 
 
 // inside your dashboard component, where `events` / `setEvents` already exist
