@@ -4,6 +4,7 @@ import Event from '../models/Event.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { toDto } from '../utils/eventRules.js';
 import { BLOCKING, checkVenueClash, conflictDto } from '../utils/clash.js';
+import { notify } from '../utils/notify.js';
 
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole('admin')); // every route below is admin-only
@@ -85,6 +86,7 @@ adminRouter.post('/events/:id/approve', async (req, res, next) => {
       { new: true }
     );
     if (!updated) return res.status(409).json(NOT_PENDING);
+    notify(updated.createdBy, { type: 'event_approved', title: 'Your event was approved', body: updated.title, link: '/organizer', email: true });
     res.json({ event: toDto(updated), overridden: clash.clash });
   } catch (err) { next(err); }
 });
@@ -101,6 +103,7 @@ adminRouter.post('/events/:id/reject', async (req, res, next) => {
       { new: true }
     );
     if (!event) return res.status(409).json(NOT_PENDING);
+    notify(event.createdBy, { type: 'event_rejected', title: 'Your event was rejected', body: parsed.data.note, link: `/organizer/events/${event._id}`, email: true });
     res.json({ event: toDto(event) });
   } catch (err) { next(err); }
 });

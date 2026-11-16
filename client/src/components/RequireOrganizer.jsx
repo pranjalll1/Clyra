@@ -19,6 +19,7 @@ export default function RequireOrganizer({ children }) {
       <div className="mx-auto max-w-lg px-4 py-16">
         <h1 className="font-syne text-3xl font-extrabold tracking-tighter">Organizer access needed</h1>
         <p className="mt-3">Your account is a student account. Organizer access is granted by an admin.</p>
+        <Link href="/become-organizer" className="btn-primary mt-4">Apply for organizer access</Link>
       </div>
     );
   }

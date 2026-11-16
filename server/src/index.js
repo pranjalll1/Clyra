@@ -1,4 +1,5 @@
 import express from 'express';
+
 import mongoose from 'mongoose';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -10,12 +11,20 @@ import userRoutes from './routes/users.js';
 import catalogRoutes from './routes/catalog.js';
 import { eventRouter, organizerRouter } from './routes/events.js';
 import { adminRouter } from './routes/admin.js';
+import notificationRoutes from './routes/notifications.js';
+import organizerApplicationRoutes from './routes/organizerApplications.js';
+import adminDashboardRoutes from './routes/adminDashboard.js';
+
 
 const app = express();
 app.use(helmet());
 app.use(cors({ origin: config.clientUrl, credentials: true }));
 app.use(express.json({ limit: '100kb' }));
 app.use(cookieParser());
+app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/organizer-applications', organizerApplicationRoutes);
+app.use('/api/v1/admin-dashboard', adminDashboardRoutes);
+app.set('trust proxy', 1);
 
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 50, standardHeaders: true, legacyHeaders: false });
 

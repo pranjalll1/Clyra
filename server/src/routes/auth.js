@@ -7,7 +7,6 @@ import { config } from '../config.js';
 import { sendVerificationEmail } from '../utils/mailer.js';
 import { sendMail } from '../utils/sendMail.js';
 import { strongPassword } from '../utils/password.js';
-import { requireHuman } from '../utils/turnstile.js';
 import { COOKIE, cookieOptions, signToken } from '../middleware/auth.js';
 
 const router = Router();
@@ -18,6 +17,7 @@ const registerSchema = z.object({
   name: z.string().trim().min(2).max(80),
   email: emailSchema,
   password: strongPassword,
+  accountType: z.enum(['student', 'organizer']).default('student'),
 });
 
 const fieldErrors = (err) => err.flatten().fieldErrors;
@@ -32,11 +32,11 @@ async function issueVerification(user) {
   await sendVerificationEmail(user.email, user.name, link);
 }
 
-router.post('/register', requireHuman, async (req, res, next) => {
+router.post('/register', async (req, res, next) => {
   try {
     const parsed = registerSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Check the highlighted fields', fields: fieldErrors(parsed.error) });
-    const { name, email, password } = parsed.data;
+    const { name, email, password, accountType } = parsed.data;
 
     if (!domainAllowed(email)) {
       return res.status(400).json({
@@ -48,9 +48,14 @@ router.post('/register', requireHuman, async (req, res, next) => {
       return res.status(409).json({ error: 'An account with this email already exists', code: 'EMAIL_TAKEN' });
     }
 
-    const user = await User.create({ name, email, passwordHash: await bcrypt.hash(password, 12) });
+    // Everyone starts as a student. Choosing "organizer" only records the wish: the role changes when an admin approves the request.
+    const user = await User.create({ name, email, passwordHash: await bcrypt.hash(password, 12), requestedRole: accountType });
     await issueVerification(user);
-    res.status(201).json({ message: 'Account created. Check your college inbox for the verification link.' });
+    res.status(201).json({
+      message: accountType === 'organizer'
+        ? 'Account created. Verify your email, sign in, then submit your organizer details for admin approval.'
+        : 'Account created. Check your college inbox for the verification link.',
+    });
   } catch (err) { next(err); }
 });
 
@@ -84,7 +89,7 @@ router.post('/resend-verification', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post('/login', requireHuman, async (req, res, next) => {
+router.post('/login', async (req, res, next) => {
   try {
     const parsed = z.object({ email: emailSchema, password: z.string().min(1) }).safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Enter your email and password' });
@@ -102,7 +107,7 @@ router.post('/login', requireHuman, async (req, res, next) => {
 });
 
 // Always answers 200 (same text whether or not the account exists). The link expires in 1 hour.
-router.post('/forgot-password', requireHuman, async (req, res, next) => {
+router.post('/forgot-password', async (req, res, next) => {
   try {
     const email = emailSchema.safeParse(req.body?.email);
     if (email.success) {

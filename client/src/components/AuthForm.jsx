@@ -1,18 +1,16 @@
 'use client';
 import Link from 'next/link';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, ApiError } from '@/lib/api';
 import { isStrongPassword } from '@/lib/passwordRules';
 import PasswordChecklist from './PasswordChecklist';
-import CaptchaBox, { CAPTCHA_ENABLED } from './CaptchaBox';
 
 export default function AuthForm({ initialTab }) {
   const router = useRouter();
-  const captchaRef = useRef(null);
   const [tab, setTab] = useState(initialTab);
   const [values, setValues] = useState({ name: '', email: '', password: '' });
-  const [token, setToken] = useState('');
+  const [accountType, setAccountType] = useState('student');
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState(null); // { kind: 'error' | 'ok', text }
   const [needsVerify, setNeedsVerify] = useState(false);
@@ -32,19 +30,16 @@ export default function AuthForm({ initialTab }) {
       setErrors({ password: ['Meet every requirement listed below the field'] });
       return;
     }
-    if (CAPTCHA_ENABLED && !token) {
-      setMessage({ kind: 'error', text: 'Complete the verification check first.' });
-      return;
-    }
     setBusy(true);
     try {
       if (isRegister) {
-        const res = await api('/auth/register', { method: 'POST', body: { ...values, turnstileToken: token } });
+        const res = await api('/auth/register', { method: 'POST', body: { ...values, accountType } });
         setMessage({ kind: 'ok', text: res.message });
         setNeedsVerify(true);
       } else {
-        await api('/auth/login', { method: 'POST', body: { email: values.email, password: values.password, turnstileToken: token } });
-        router.push('/');
+        const res = await api('/auth/login', { method: 'POST', body: { email: values.email, password: values.password } });
+        // Someone who signed up as an organizer but is not approved yet goes straight to their request.
+        router.push(res.user.role === 'student' && res.user.requestedRole === 'organizer' ? '/become-organizer' : '/');
         router.refresh();
       }
     } catch (err) {
@@ -54,8 +49,6 @@ export default function AuthForm({ initialTab }) {
       if (err.code === 'EMAIL_NOT_VERIFIED') setNeedsVerify(true);
     } finally {
       setBusy(false);
-      captchaRef.current?.reset(); // a Turnstile token can be used only once
-      setToken('');
     }
   }
 
@@ -88,6 +81,22 @@ export default function AuthForm({ initialTab }) {
 
       <form onSubmit={submit} noValidate className="mt-6 space-y-5">
         {isRegister && (
+          <fieldset>
+            <legend className="label-caps">I am signing up as</legend>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {[['student', 'Student', 'Browse events, register and get tickets.'], ['organizer', 'Organizer', 'Create and manage events. An admin approves you first.']].map(([id, title, text]) => (
+                <label key={id} className={`flex cursor-pointer gap-3 border border-onyx p-3 ${accountType === id ? 'bg-lime' : 'bg-surface hover:bg-lime-muted'}`}>
+                  <input type="radio" name="accountType" value={id} checked={accountType === id} onChange={() => setAccountType(id)} className="mt-1 h-4 w-4 accent-onyx" />
+                  <span><span className="block font-syne text-base font-bold">{title}</span><span className="block text-sm">{text}</span></span>
+                </label>
+              ))}
+            </div>
+            {accountType === 'organizer' && (
+              <p className="mt-2 text-sm text-ink-muted">After you verify your email and sign in, you submit your organization details. You can use Clyra as a student while you wait for approval.</p>
+            )}
+          </fieldset>
+        )}
+        {isRegister && (
           <div>
             <label htmlFor="name" className="label-caps">Full name</label>
             <input id="name" className={`field mt-2 ${err('name') ? 'field-error' : ''}`} value={values.name} onChange={set('name')}
@@ -112,8 +121,6 @@ export default function AuthForm({ initialTab }) {
           {err('password') && <p id="password-err" className="mt-1 text-sm font-semibold text-coral-dark">{err('password')}</p>}
           {isRegister && <PasswordChecklist password={values.password} />}
         </div>
-
-        <CaptchaBox ref={captchaRef} onToken={setToken} />
 
         <div aria-live="polite">
           {message && (

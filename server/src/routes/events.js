@@ -8,6 +8,7 @@ import Category from '../models/Category.js';
 import User from '../models/User.js';
 import { z } from 'zod';
 import { checkVenueClash, conflictDto } from '../utils/clash.js';
+import { notify } from '../utils/notify.js';
 
 import {
   createSchema, patchSchema, fieldErrors, crossChecks, completeness, toDto,
@@ -162,7 +163,8 @@ eventRouter.post('/:id/register', studentOnly, async (req, res, next) => {
       }
     }
 
-    seatTaken = false; // success: the seat is now really used
+    seatTaken = false; 
+    notify(userId, { type: 'registration', title: 'You are registered', body: event.title, link: '/my-bookings', email: true });// success: the seat is now really used
     res.status(201).json({
       registration: { id: reg._id.toString(), status: reg.status, registeredAt: reg.createdAt },
       seatsLeft: reserved.capacity == null ? null : Math.max(0, reserved.capacity - reserved.registeredCount),
@@ -187,6 +189,7 @@ eventRouter.delete('/:id/register', studentOnly, async (req, res, next) => {
       { eventId, userId: req.user._id, status: 'registered' },
       { $set: { status: 'cancelled', cancelledAt: new Date() } }
     );
+    notify(await Registration.find({ eventId: event._id, status: 'registered' }).distinct('userId'), { type: 'event_cancelled', title: 'An event you registered for was cancelled', body: event.title, link: '/my-bookings', email: true });
     if (!reg) return fail(res, 404, 'You are not registered for this event', 'NOT_REGISTERED');
 
     await Event.updateOne({ _id: eventId, registeredCount: { $gt: 0 } }, { $inc: { registeredCount: -1 } });
@@ -417,14 +420,52 @@ eventRouter.post('/:id/submit', guard, async (req, res, next) => {
     }
 
     // Atomic: only moves forward if it is still a draft/rejected event, so a double click cannot submit twice.
+       // Admins are trusted: their events publish straight away (the clash check above still applies).
+    const nextStatus = req.user.role === 'admin' ? 'published' : 'pending_approval';
     const updated = await Event.findOneAndUpdate(
       { _id: event._id, status: { $in: EDITABLE } },
-      { $set: { status: 'pending', submittedAt: new Date() } },
+      { $set: { status: nextStatus, submittedAt: new Date() } },
       { new: true }
     );
     if (!updated) {
       return res.status(409).json({ error: 'This event was already submitted', code: 'NOT_EDITABLE' });
     }
+    if (nextStatus === 'pending_approval') {
+      notify(await User.find({ role: 'admin' }).distinct('_id'), { type: 'event_submitted', title: 'New event to review', body: updated.title, link: '/admin/review' });
+    }
+    if (!updated) {
+      return res.status(409).json({ error: 'This event was already submitted', code: 'NOT_EDITABLE' });
+    }
+    notify(await User.find({ role: 'admin' }).distinct('_id'), { type: 'event_submitted', title: 'New event to review', body: updated.title, link: '/admin/review' });
     res.json({ event: toDto(updated), completeness: completeness(updated) });
+  } catch (err) { next(err); }
+});
+organizerRouter.get('/events', guard, async (req, res, next) => {
+  try {
+    const orgIds = await orgIdsFor(req.user);
+    const scope = req.user.role === 'admin'
+      ? { archivedAt: null }
+      : { archivedAt: null, $or: [{ organizationId: { $in: orgIds } }, { createdBy: req.user._id }] };
+
+    const filter = { ...scope };
+    if (req.query.status && req.query.status !== 'all') filter.status = String(req.query.status);
+    const q = String(req.query.q || '').trim().slice(0, 80);
+    if (q) {
+      const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      filter.$and = [{ $or: [{ title: rx }, { shortCode: rx }] }];
+    }
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
+
+    const [items, total, grouped] = await Promise.all([
+      Event.find(filter).sort('-updatedAt').skip((page - 1) * limit).limit(limit)
+        .populate('venueId', 'name').populate('categoryId', 'name'),
+      Event.countDocuments(filter),
+      Event.aggregate([{ $match: scope }, { $group: { _id: '$status', n: { $sum: 1 } } }]),
+    ]);
+
+    const counts = { all: 0 };
+    for (const g of grouped) { counts[g._id] = g.n; counts.all += g.n; }
+    res.json({ items: items.map(toDto), total, page, limit, counts });
   } catch (err) { next(err); }
 });

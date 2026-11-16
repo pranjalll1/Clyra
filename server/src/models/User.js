@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true, select: false },
     role: { type: String, enum: ROLES, default: 'student' },
+    requestedRole: { type: String, enum: ['student', 'organizer'], default: 'student' }, // what they chose at sign-up
     emailVerifiedAt: { type: Date, default: null },
     verifyTokenHash: { type: String, select: false },
     verifyTokenExpires: { type: Date, select: false },
@@ -27,6 +28,7 @@ userSchema.methods.toPublic = function () {
     name: this.name,
     email: this.email,
     role: this.role,
+    requestedRole: this.requestedRole,
     emailVerified: !!this.emailVerifiedAt,
     department: this.department,
     year: this.year,

@@ -5,6 +5,7 @@ import './globals.css';
 import Header from '@/components/Header';
 import { Toaster } from 'sonner';
 import { ConfirmProvider } from '@/components/ConfirmDialog';
+import Footer from '@/components/Footer';
 
 const syne = Syne({
   subsets: ['latin'],
@@ -42,11 +43,11 @@ export default function RootLayout({ children }) {
 
           <main>{children}</main>
 
-          <footer className="mt-16 border-t-2 border-onyx bg-onyx px-6 py-8 text-surface">
+          <Footer className="mt-16 border-t-2 border-onyx bg-onyx px-6 py-8 text-surface">
             <p className="font-mono text-xs uppercase tracking-wider">
               Clyra campus events &middot; Lovely Professional University
             </p>
-          </footer>
+          </Footer>
 
           <Toaster position="top-right" richColors />
         </ConfirmProvider>

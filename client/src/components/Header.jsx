@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useMe } from '@/lib/useMe';
 import ConfirmDialog from './ConfirmDialog';
+import NotificationBell from './NotificationBell';
 
 const linkCls = 'font-mono text-xs font-bold uppercase tracking-wider underline underline-offset-4';
 
@@ -35,7 +36,9 @@ export default function Header() {
     router.refresh();
   }
 
+  const isStudent = user?.role === 'student';
   const isStaff = user && ['organizer', 'admin'].includes(user.role);
+  const isAdmin = user?.role === 'admin';
 
   return (
     <header className="sticky top-0 z-50 border-b-2 border-onyx bg-surface">
@@ -48,10 +51,14 @@ export default function Header() {
           <Link href="/events" className={linkCls}>Events</Link>
           {loading ? null : user ? (
             <>
-              {user.role === 'student' && <Link href="/my-bookings" className={linkCls}>My bookings</Link>}
+              {isStudent && <Link href="/my-bookings" className={linkCls}>My bookings</Link>}
+              {isStudent && <Link href="/become-organizer" className={linkCls}>Become an organizer</Link>}
               {isStaff && <Link href="/organizer" className={linkCls}>Your events</Link>}
               {isStaff && <Link href="/organizer/venues" className={linkCls}>Venues</Link>}
-              {user.role === 'admin' && <Link href="/admin/review" className={linkCls}>Review events</Link>}
+              {isAdmin && <Link href="/admin" className={linkCls}>Admin</Link>}
+              {isAdmin && <Link href="/admin/organizers" className={linkCls}>Organizer requests</Link>}
+              {isAdmin && <Link href="/admin/review" className={linkCls}>Review events</Link>}
+              <NotificationBell />
               <span className="hidden font-mono text-xs uppercase tracking-wider text-ink-muted sm:inline">{user.name} &middot; {user.role}</span>
               <button onClick={() => setConfirmOut(true)} className="btn-ghost">Sign out</button>
             </>

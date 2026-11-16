@@ -1,30 +1,24 @@
 'use client';
 import Link from 'next/link';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { api, ApiError } from '@/lib/api';
-import CaptchaBox, { CAPTCHA_ENABLED } from './CaptchaBox';
 
 export default function ForgotPasswordForm() {
-  const captchaRef = useRef(null);
   const [email, setEmail] = useState('');
-  const [token, setToken] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(null); // { kind, text }
 
   async function submit(e) {
     e.preventDefault();
     setMessage(null);
-    if (CAPTCHA_ENABLED && !token) return setMessage({ kind: 'error', text: 'Complete the verification check first.' });
     setBusy(true);
     try {
-      const res = await api('/auth/forgot-password', { method: 'POST', body: { email, turnstileToken: token } });
+      const res = await api('/auth/forgot-password', { method: 'POST', body: { email } });
       setMessage({ kind: 'ok', text: res.message });
     } catch (err) {
       setMessage({ kind: 'error', text: err instanceof ApiError ? err.message : 'Could not reach the server. Try again.' });
     } finally {
       setBusy(false);
-      captchaRef.current?.reset();
-      setToken('');
     }
   }
 
@@ -37,7 +31,6 @@ export default function ForgotPasswordForm() {
           <label htmlFor="email" className="label-caps">College email</label>
           <input id="email" type="email" className="field mt-2" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="yourname@lpu.in" autoComplete="email" required />
         </div>
-        <CaptchaBox ref={captchaRef} onToken={setToken} />
         <div aria-live="polite">
           {message && (
             <p className={`border-[1.5px] border-onyx px-3 py-2 text-sm font-semibold ${message.kind === 'error' ? 'bg-coral-light text-coral-dark' : 'bg-lime-muted text-onyx'}`}>{message.text}</p>
