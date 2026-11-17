@@ -10,8 +10,6 @@ const userSchema = new mongoose.Schema(
     role: { type: String, enum: ROLES, default: 'student' },
     requestedRole: { type: String, enum: ['student', 'organizer'], default: 'student' }, // what they chose at sign-up
     emailVerifiedAt: { type: Date, default: null },
-    verifyTokenHash: { type: String, select: false },
-    verifyTokenExpires: { type: Date, select: false },
     resetTokenHash: { type: String, select: false },
     resetTokenExpires: { type: Date, select: false },
     passwordChangedAt: { type: Date, default: null },

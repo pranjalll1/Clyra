@@ -13,19 +13,18 @@ export default function AuthForm({ initialTab }) {
   const [accountType, setAccountType] = useState('student');
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState(null); // { kind: 'error' | 'ok', text }
-  const [needsVerify, setNeedsVerify] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const isRegister = tab === 'register';
   const set = (k) => (e) => setValues((v) => ({ ...v, [k]: e.target.value }));
 
   function switchTab(next) {
-    setTab(next); setErrors({}); setMessage(null); setNeedsVerify(false);
+    setTab(next); setErrors({}); setMessage(null);
   }
 
   async function submit(e) {
     e.preventDefault();
-    setErrors({}); setMessage(null); setNeedsVerify(false);
+    setErrors({}); setMessage(null);
     if (isRegister && !isStrongPassword(values.password)) {
       setErrors({ password: ['Meet every requirement listed below the field'] });
       return;
@@ -34,8 +33,9 @@ export default function AuthForm({ initialTab }) {
     try {
       if (isRegister) {
         const res = await api('/auth/register', { method: 'POST', body: { ...values, accountType } });
-        setMessage({ kind: 'ok', text: res.message });
-        setNeedsVerify(true);
+        // The account is active and signed in already. Organizers go straight to their request form.
+        router.push(res.user.requestedRole === 'organizer' ? '/become-organizer' : '/');
+        router.refresh();
       } else {
         const res = await api('/auth/login', { method: 'POST', body: { email: values.email, password: values.password } });
         // Someone who signed up as an organizer but is not approved yet goes straight to their request.
@@ -46,18 +46,8 @@ export default function AuthForm({ initialTab }) {
       if (!(err instanceof ApiError)) return setMessage({ kind: 'error', text: 'Could not reach the server. Try again.' });
       setErrors(err.fields);
       setMessage({ kind: 'error', text: err.message });
-      if (err.code === 'EMAIL_NOT_VERIFIED') setNeedsVerify(true);
     } finally {
       setBusy(false);
-    }
-  }
-
-  async function resend() {
-    try {
-      const res = await api('/auth/resend-verification', { method: 'POST', body: { email: values.email } });
-      setMessage({ kind: 'ok', text: res.message });
-    } catch {
-      setMessage({ kind: 'error', text: 'Could not send the link. Try again in a minute.' });
     }
   }
 
@@ -92,7 +82,7 @@ export default function AuthForm({ initialTab }) {
               ))}
             </div>
             {accountType === 'organizer' && (
-              <p className="mt-2 text-sm text-ink-muted">After you verify your email and sign in, you submit your organization details. You can use Clyra as a student while you wait for approval.</p>
+              <p className="mt-2 text-sm text-ink-muted">Right after you create your account, you submit your organization details. You can use Clyra as a student while you wait for approval.</p>
             )}
           </fieldset>
         )}
@@ -113,7 +103,7 @@ export default function AuthForm({ initialTab }) {
         <div>
           <div className="flex items-baseline justify-between">
             <label htmlFor="password" className="label-caps">Password</label>
-            {!isRegister && <Link href="/forgot-password" className="text-sm font-semibold underline underline-offset-2">Forgot password?</Link>}
+            {!isRegister && process.env.NEXT_PUBLIC_PASSWORD_RESET === 'true' && <Link href="/forgot-password" className="text-sm font-semibold underline underline-offset-2">Forgot password?</Link>}
           </div>
           <input id="password" type="password" className={`field mt-2 ${err('password') ? 'field-error' : ''}`} value={values.password} onChange={set('password')}
             autoComplete={isRegister ? 'new-password' : 'current-password'} required
@@ -127,9 +117,6 @@ export default function AuthForm({ initialTab }) {
             <p className={`border-[1.5px] border-onyx px-3 py-2 text-sm font-semibold ${message.kind === 'error' ? 'bg-coral-light text-coral-dark' : 'bg-lime-muted text-onyx'}`}>
               {message.text}
             </p>
-          )}
-          {needsVerify && (
-            <button type="button" onClick={resend} className="mt-2 text-sm font-semibold underline underline-offset-2">Send a new verification link</button>
           )}
         </div>
 

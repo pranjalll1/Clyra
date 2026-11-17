@@ -4,7 +4,6 @@ import crypto from 'crypto';
 import { z } from 'zod';
 import User from '../models/User.js';
 import { config } from '../config.js';
-import { sendVerificationEmail } from '../utils/mailer.js';
 import { sendMail } from '../utils/sendMail.js';
 import { strongPassword } from '../utils/password.js';
 import { COOKIE, cookieOptions, signToken } from '../middleware/auth.js';
@@ -23,15 +22,6 @@ const registerSchema = z.object({
 const fieldErrors = (err) => err.flatten().fieldErrors;
 const domainAllowed = (email) => config.allowedDomains.includes(email.split('@')[1]);
 
-async function issueVerification(user) {
-  const token = crypto.randomBytes(32).toString('hex');
-  user.verifyTokenHash = sha256(token);
-  user.verifyTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  await user.save();
-  const link = `${config.clientUrl}/verify-email?token=${token}`;
-  await sendVerificationEmail(user.email, user.name, link);
-}
-
 router.post('/register', async (req, res, next) => {
   try {
     const parsed = registerSchema.safeParse(req.body);
@@ -49,43 +39,12 @@ router.post('/register', async (req, res, next) => {
     }
 
     // Everyone starts as a student. Choosing "organizer" only records the wish: the role changes when an admin approves the request.
-    const user = await User.create({ name, email, passwordHash: await bcrypt.hash(password, 12), requestedRole: accountType });
-    await issueVerification(user);
-    res.status(201).json({
-      message: accountType === 'organizer'
-        ? 'Account created. Verify your email, sign in, then submit your organizer details for admin approval.'
-        : 'Account created. Check your college inbox for the verification link.',
+    // New accounts are active straight away (emailVerifiedAt is the "account is active" flag the auth middleware checks).
+    const user = await User.create({
+      name, email, passwordHash: await bcrypt.hash(password, 12), requestedRole: accountType, emailVerifiedAt: new Date(),
     });
-  } catch (err) { next(err); }
-});
-
-router.post('/verify-email', async (req, res, next) => {
-  try {
-    const token = z.string().min(10).safeParse(req.body?.token);
-    if (!token.success) return res.status(400).json({ error: 'Verification link is invalid', code: 'INVALID_TOKEN' });
-    const user = await User.findOne({
-      verifyTokenHash: sha256(token.data),
-      verifyTokenExpires: { $gt: new Date() },
-    }).select('+verifyTokenHash +verifyTokenExpires');
-    if (!user) return res.status(400).json({ error: 'Verification link is invalid or expired', code: 'INVALID_TOKEN' });
-
-    user.emailVerifiedAt = new Date();
-    user.verifyTokenHash = undefined;
-    user.verifyTokenExpires = undefined;
-    await user.save();
-    res.json({ message: 'Email verified. You can sign in now.' });
-  } catch (err) { next(err); }
-});
-
-// Always answers 200 so the endpoint cannot be used to discover which emails have accounts.
-router.post('/resend-verification', async (req, res, next) => {
-  try {
-    const email = emailSchema.safeParse(req.body?.email);
-    if (email.success) {
-      const user = await User.findOne({ email: email.data });
-      if (user && !user.emailVerifiedAt) await issueVerification(user);
-    }
-    res.json({ message: 'If that account needs verification, a new link has been sent.' });
+    res.cookie(COOKIE, signToken(user), cookieOptions); // signed in right after sign-up
+    res.status(201).json({ user: user.toPublic() });
   } catch (err) { next(err); }
 });
 
@@ -97,9 +56,6 @@ router.post('/login', async (req, res, next) => {
     const user = await User.findOne({ email: parsed.data.email }).select('+passwordHash');
     const ok = user && (await bcrypt.compare(parsed.data.password, user.passwordHash));
     if (!ok) return res.status(401).json({ error: 'Email or password is incorrect', code: 'BAD_CREDENTIALS' });
-    if (!user.emailVerifiedAt) {
-      return res.status(403).json({ error: 'Verify your email before signing in', code: 'EMAIL_NOT_VERIFIED' });
-    }
 
     res.cookie(COOKIE, signToken(user), cookieOptions);
     res.json({ user: user.toPublic() });

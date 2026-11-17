@@ -7,14 +7,14 @@ Find, register for and run events at Lovely Professional University. Students di
 ## Features
 
 **Accounts and security**
-- Sign-up limited to college email addresses, with email verification.
+- Sign-up limited to college email addresses. New accounts are active immediately and signed in.
 - Strong password rules (8 to 72 characters, upper and lower case, number, special character) enforced on the server.
-- Forgot and reset password with one-time links that expire in 1 hour.
-- Fake sign-ups are limited by college-domain restriction, mandatory email verification and rate limiting on the auth routes.
+- Forgot and reset password with one-time links that expire in 1 hour (needs an email service, so the link is hidden unless `NEXT_PUBLIC_PASSWORD_RESET=true`).
+- Sign-ups are limited by the college-domain restriction and rate limiting on the auth routes.
 - Three roles (student, organizer, admin) with role and ownership checks on every protected route.
 
 **Organizer access workflow**
-1. A person signs up choosing **Organizer** (or applies later from a student account), verifies their email, signs in, and submits organizer details (organization, institution, registration number, faculty coordinator). Until approved they can use Clyra as a student but cannot create events.
+1. A person signs up choosing **Organizer** (or applies later from a student account), signs in, and submits organizer details (organization, institution, registration number, faculty coordinator). Until approved they can use Clyra as a student but cannot create events.
 2. An admin reviews the request in the admin dashboard.
 3. Approved: the account gets organizer access and can create and manage events. Rejected: access is denied with a reason, and the account cannot create or publish events. Students need no approval. Admins can create events too, and theirs publish immediately.
 
@@ -33,7 +33,7 @@ Find, register for and run events at Lovely Professional University. Students di
 - Clash detection when submitting or approving an event, venue timetable, and an admin override that requires a reason.
 
 **Notifications**
-- In-app bell with unread count, notification page, toasts, and email for key events (registration, approval, rejection, cancellation, organizer decisions).
+- In-app bell with unread count, notification page, toasts, and email for key events (registration, approval, rejection, cancellation, organizer decisions) when an email service is configured.
 
 ## Tech stack
 Next.js 14 (App Router) and Tailwind CSS, Node.js and Express, MongoDB Atlas with Mongoose, Zod validation, JWT in httpOnly cookies, Nodemailer and the Brevo API for email. Hosted on Vercel (frontend) and Render (backend).
@@ -81,7 +81,7 @@ Requirements: Node.js 18 or newer and a free MongoDB Atlas cluster.
    npm install
    npm run dev               # http://localhost:3000
    ```
-With no email settings, verification and reset links are printed in the server console.
+With no email settings, emails are printed in the server console instead of being sent.
 
 **Demo accounts** (created by `npm run seed`, password is your `SEED_PASSWORD`): `admin.dev@lpu.in`, `organizer.dev@lpu.in`, `student.dev@lpu.in`. Delete or re-password them on a public site.
 
@@ -90,7 +90,8 @@ With no email settings, verification and reset links are printed in the server c
 |---|---|---|
 | server | `MONGODB_URI`, `JWT_SECRET` | Database and cookie signing (required) |
 | server | `CLIENT_URL`, `ALLOWED_EMAIL_DOMAINS` | Email links and CORS; allowed sign-up domains |
-| server | `BREVO_API_KEY`, `MAIL_SENDER_EMAIL`, `MAIL_SENDER_NAME` | Email in production |
+| server | `BREVO_API_KEY`, `MAIL_SENDER_EMAIL`, `MAIL_SENDER_NAME` | Optional: email in production |
+| client | `NEXT_PUBLIC_PASSWORD_RESET` | Set to `true` to show the forgot-password link (needs email) |
 | client | `API_URL` | Where Next.js forwards `/api` |
 
 ## Testing
@@ -98,16 +99,17 @@ With no email settings, verification and reset links are printed in the server c
 - Manual checklists for each module are in `DEPLOY.md` and `CLYRA_PROJECT_GUIDE.md`.
 
 ## Security notes
-Passwords are bcrypt-hashed. Verification and reset tokens are stored hashed and are single-use. Cookies are httpOnly and secure in production. Auth routes are rate limited. Public endpoints return an allow-listed set of fields. Login, reset and resend responses do not reveal whether an email has an account.
+Passwords are bcrypt-hashed. Password-reset tokens are stored hashed and are single-use. Cookies are httpOnly and secure in production. Auth routes are rate limited. Public endpoints return an allow-listed set of fields. Login, reset and resend responses do not reveal whether an email has an account.
 
 ## Deployment
-See `DEPLOY.md` (Vercel + Render + Atlas, Brevo email, smoke test).
+See `DEPLOY.md` (Vercel + Render + Atlas, optional email, smoke test).
 
 ## Known limitations and future work
 - The free backend sleeps when idle, so the first request can be slow. Scheduled reminders are not included for that reason.
 - Notifications refresh by polling (every 25 seconds), not a permanent connection.
 - Not built yet: settings page with change password, admin tool to revoke organizer access, dark theme, the Clyra chatbot, saved events, CSV export.
 - Poster images are sample AI-generated art.
+- Email is optional. Without an email service, password reset and notification emails are not sent (in-app notifications still work).
 
 ## Author
 Pranjal Soni (Pranjal) | [GitHub](https://github.com/pranjalll1) | [LinkedIn](https://www.linkedin.com/in/pranjal-soni24/) | pranjalsoni1290@gmail.com
