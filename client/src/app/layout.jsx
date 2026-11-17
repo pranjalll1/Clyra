@@ -1,5 +1,5 @@
 
-import { Syne, Hanken_Grotesk, JetBrains_Mono } from 'next/font/google';
+
 import './globals.css';
 
 import Header from '@/components/Header';
@@ -7,23 +7,17 @@ import { Toaster } from 'sonner';
 import { ConfirmProvider } from '@/components/ConfirmDialog';
 import Footer from '@/components/Footer';
 
-const syne = Syne({
-  subsets: ['latin'],
-  weight: ['700', '800'],
-  variable: '--font-syne',
-});
+import '@fontsource/syne/700.css';
+import '@fontsource/syne/800.css';
+import '@fontsource/hanken-grotesk/400.css';
+import '@fontsource/hanken-grotesk/500.css';
+import '@fontsource/hanken-grotesk/600.css';
+import '@fontsource/hanken-grotesk/700.css';
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/600.css';
+import '@fontsource/jetbrains-mono/700.css';
 
-const hanken = Hanken_Grotesk({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-hanken',
-});
 
-const mono = JetBrains_Mono({
-  subsets: ['latin'],
-  weight: ['400', '600', '700'],
-  variable: '--font-mono',
-});
 
 export const metadata = {
   title: 'Clyra: campus events at LPU',
@@ -34,9 +28,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html
-      lang="en"
-      className={`${syne.variable} ${hanken.variable} ${mono.variable}`}
-    >
+      lang="en">
       <body>
         <ConfirmProvider>
           <Header />

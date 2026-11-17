@@ -1,6 +1,11 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+:root {
+  --font-syne: 'Syne';
+  --font-hanken: 'Hanken Grotesk';
+  --font-mono: 'JetBrains Mono';
+}
 
 @layer base {
   body { @apply bg-surface text-onyx font-grotesk antialiased; }
