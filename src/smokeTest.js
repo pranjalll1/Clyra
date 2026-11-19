@@ -3,7 +3,7 @@
 //   node src/smokeTest.js https://your-api.onrender.com
 // Optional signed-in checks (only work when Turnstile is off or you use the dev accounts locally):
 //   SMOKE_STUDENT_EMAIL=... SMOKE_STUDENT_PASSWORD=... SMOKE_ADMIN_EMAIL=... SMOKE_ADMIN_PASSWORD=... node src/smokeTest.js
-const BASE = (process.argv[2] || process.env.SMOKE_API || 'http://localhost:5001').replace(/\/$/, '') + '/api/v1';
+const BASE = (process.argv[2] || process.env.SMOKE_API || 'http://localhost:3000').replace(/\/$/, '') + '/api/v1';
 let pass = 0, fail = 0, skip = 0;
 
 const ok = (name, cond, extra = '') => { cond ? pass++ : fail++; console.log(`  ${cond ? '✓' : '✗'} ${name}${cond ? '' : ` ${extra}`}`); };

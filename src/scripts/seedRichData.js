@@ -9,15 +9,15 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import mongoose from 'mongoose';
-import { config } from './config.js';
-import Event from './models/Event.js';
-import Organization from './models/Organization.js';
-import Category from './models/Category.js';
-import User from './models/User.js';
-import Registration from './models/Registration.js';
+import { config } from '../shared/server/config.js';
+import Event from '../shared/models/Event.js';
+import Organization from '../shared/models/Organization.js';
+import Category from '../shared/models/Category.js';
+import User from '../shared/models/User.js';
+import Registration from '../shared/models/Registration.js';
 
 const slugify = (s) => s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
-const POSTER_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/public/posters');
+const POSTER_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../public/posters');
 
 // Same random numbers every run, so the demo data is repeatable.
 let state = 20261112;

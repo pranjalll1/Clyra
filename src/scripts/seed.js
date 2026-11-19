@@ -1,10 +1,10 @@
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
-import { config } from './config.js';
-import User from './models/User.js';
-import Category from './models/Category.js';
-import Venue from './models/Venue.js';
-import Organization from './models/Organization.js';
+import { config } from '../shared/server/config.js';
+import User from '../shared/models/User.js';
+import Category from '../shared/models/Category.js';
+import Venue from '../shared/models/Venue.js';
+import Organization from '../shared/models/Organization.js';
 
 const password = process.env.SEED_PASSWORD || 'ChangeMe123!';
 
