@@ -1,5 +1,5 @@
-import Event from '../models/Event.js';
-import Venue from '../models/Venue.js';
+import Event from '@/shared/models/Event.js';
+import Venue from '@/shared/models/Venue.js';
 import { peakConcurrency } from './overlap.js';
 
 // Statuses that hold a venue slot. Drafts, rejected and cancelled events do not block anything.

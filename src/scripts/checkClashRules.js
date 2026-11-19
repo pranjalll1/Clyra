@@ -1,5 +1,5 @@
 // Run with:  node src/checkClashRules.js   (from the server folder). No database needed.
-import { overlaps, peakConcurrency } from './utils/overlap.js';
+import { overlaps, peakConcurrency } from '../modules/venue-clash/services/overlap.js';
 
 const t = (h) => new Date(`2026-11-11T${String(h).padStart(2, '0')}:00:00Z`);
 let failed = 0;
