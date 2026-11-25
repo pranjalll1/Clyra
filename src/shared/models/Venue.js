@@ -4,7 +4,7 @@ export const VENUE_TYPES = ['auditorium', 'sports', 'hub', 'academic'];
 
 const venueSchema = new mongoose.Schema(
   {
-    code: { type: String, required: true, unique: true }, // e.g. VNU-SDMAUD-02
+    code: { type: String, required: true, unique: true, uppercase: true, trim: true }, // e.g. VNU-SDMAUD-02
     name: { type: String, required: true, trim: true },
     location: { type: String, trim: true },
     type: { type: String, enum: VENUE_TYPES, required: true },
