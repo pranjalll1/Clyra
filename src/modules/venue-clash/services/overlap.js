@@ -1,25 +1,61 @@
-// Pure time helpers for venue clashes. No database code here, so they are easy to test.
+// Unit III: Math and time helpers for venue clash calculations
+// Clean, pure functions without database dependencies - easy to test and verify.
 
-// Do [aStart, aEnd) and [bStart, bEnd) overlap?
-// Back-to-back events (one ends exactly when the next starts) do NOT overlap.
+/**
+ * Checks whether two time ranges [aStart, aEnd) and [bStart, bEnd) overlap.
+ * Back-to-back events (where event A ends exactly when event B starts) do NOT overlap.
+ */
 export function overlaps(aStart, aEnd, bStart, bEnd) {
-  return new Date(aStart) < new Date(bEnd) && new Date(aEnd) > new Date(bStart);
+  const aStartTime = new Date(aStart).getTime();
+  const aEndTime = new Date(aEnd).getTime();
+  const bStartTime = new Date(bStart).getTime();
+  const bEndTime = new Date(bEnd).getTime();
+
+  // Overlap condition: A starts before B ends, AND A ends after B starts
+  return aStartTime < bEndTime && aEndTime > bStartTime;
 }
 
-// The largest number of events running at the same moment.
-// A venue with `units` separate spaces clashes only when this peak is ABOVE `units`.
+/**
+ * Calculates the maximum number of simultaneous events happening at any single moment.
+ * Uses a Line-Sweep algorithm:
+ * 1. Mark each event start with +1 (adds an event to current running count)
+ * 2. Mark each event end with -1 (removes an event from running count)
+ * 3. Sort chronologically: if an end and start happen at the same instant,
+ *    process the end (-1) first so back-to-back events do not falsely clash.
+ */
 export function peakConcurrency(intervals) {
-  const edges = [];
-  for (const { startAt, endAt } of intervals) {
-    edges.push([new Date(startAt).getTime(), 1], [new Date(endAt).getTime(), -1]);
+  if (!intervals || intervals.length === 0) {
+    return 0;
   }
-  // At the same instant, an end (-1) is counted before a start (+1), so back-to-back events do not stack.
-  edges.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-  let current = 0;
+
+  const timelinePoints = [];
+
+  for (const event of intervals) {
+    const startTime = new Date(event.startAt).getTime();
+    const endTime = new Date(event.endAt).getTime();
+
+    timelinePoints.push({ time: startTime, change: 1 });  // event begins
+    timelinePoints.push({ time: endTime, change: -1 });  // event finishes
+  }
+
+  // Sort by time ascending
+  // When timestamps are identical, -1 comes before +1 (end before start)
+  timelinePoints.sort((a, b) => {
+    if (a.time !== b.time) {
+      return a.time - b.time;
+    }
+    return a.change - b.change;
+  });
+
+  let currentActiveEvents = 0;
   let peak = 0;
-  for (const [, change] of edges) {
-    current += change;
-    peak = Math.max(peak, current);
+
+  for (const point of timelinePoints) {
+    currentActiveEvents += point.change;
+    if (currentActiveEvents > peak) {
+      peak = currentActiveEvents;
+    }
   }
+
   return peak;
 }
