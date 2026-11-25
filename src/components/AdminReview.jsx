@@ -10,9 +10,8 @@ const rangeFmt = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'shor
 const range = (a, b) => `${rangeFmt.format(new Date(a))} to ${rangeFmt.format(new Date(b))}`;
 const STATUS_LABEL = { published: 'Published', pending_approval: 'Pending review' };
 
-// Venue conflict summary shown on every pending event.
 function ClashBox({ e }) {
-  const list = e.conflicts || []; // older API versions do not send this field, so never assume it exists
+  const list = e.conflicts || [];
   if (!e.venueName) return null;
   if (!list.length) {
     return <p className="mt-4 border border-onyx bg-lime-muted p-3 text-sm font-semibold">No venue clash. The slot is free.</p>;

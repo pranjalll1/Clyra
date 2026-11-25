@@ -1,4 +1,9 @@
-import 'dotenv/config';
+// Unit IV: Database Integration - Environment Variables & Application Configuration
+import dotenv from 'dotenv';
+
+// Load .env.local first (Next.js App Router standard), fallback to .env for node scripts
+dotenv.config({ path: '.env.local' });
+dotenv.config();
 
 export const config = {
   port: Number(process.env.PORT) || 3000,

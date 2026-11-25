@@ -1,3 +1,5 @@
+// Unit IV: Authentication and Authorization
+// Session Management, JWT verification, and Role-Based Access Control (RBAC)
 import jwt from 'jsonwebtoken';
 import { config } from './config.js';
 import User from '../models/User.js';
@@ -5,31 +7,33 @@ import { jsonError } from './response.js';
 
 export const COOKIE = 'clyra_token';
 
+// HTTP-only cookie configuration for secure session handling
 export const cookieOptions = {
   httpOnly: true,
   sameSite: 'lax',
   secure: config.isProd,
-  maxAge: 7 * 24 * 60 * 60, // 7 days in seconds for Next.js cookies
+  maxAge: 7 * 24 * 60 * 60, // 7 days session duration
   path: '/',
 };
 
+// Generates signed JWT session token
 export function signToken(user) {
   return jwt.sign({ sub: user._id.toString() }, config.jwtSecret, { expiresIn: '7d' });
 }
 
+// Extracts session token from request cookies or authorization header
 export function getTokenFromRequest(req) {
-  // Try NextRequest cookies
   if (req.cookies && typeof req.cookies.get === 'function') {
     const c = req.cookies.get(COOKIE);
     if (c?.value) return c.value;
     if (typeof c === 'string') return c;
   }
-  // Fallback to cookie header string
   const cookieHeader = req.headers.get?.('cookie') || req.headers?.cookie || '';
   const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${COOKIE}=([^;]+)`));
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+// Validates token and fetches current authenticated user from MongoDB
 export async function getAuthUser(req) {
   const token = getTokenFromRequest(req);
   if (!token) return null;
@@ -53,6 +57,7 @@ export async function getAuthUser(req) {
   }
 }
 
+// Higher-order route wrapper to protect endpoints (Authentication Guard)
 export function withAuth(handler) {
   return async function (req, context) {
     const token = getTokenFromRequest(req);
@@ -67,6 +72,7 @@ export function withAuth(handler) {
   };
 }
 
+// Role-Based Access Control wrapper (RBAC Guard: 'student' | 'organizer' | 'admin')
 export function withRole(roles, handler) {
   const allowed = Array.isArray(roles) ? roles : [roles];
   return withAuth(async function (req, context) {

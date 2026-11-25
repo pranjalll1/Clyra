@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { connectDb } from './db.js';
 
+// Unit III: API Development - Request and Response Handling
+// Standard helper functions for Next.js Route Handlers (NextResponse)
+
 export function jsonOk(data, status = 200, init = {}) {
   return NextResponse.json(data, { status, ...init });
 }
@@ -25,10 +28,7 @@ export async function parseJson(req) {
   }
 }
 
-/**
- * Standard API route wrapper that ensures DB connection and
- * catches any uncaught exception, returning Express-compatible 500 response.
- */
+// Route Handler wrapper: connects to MongoDB and catches unhandled exceptions
 export function handleApiRoute(handler) {
   return async function (req, context) {
     try {

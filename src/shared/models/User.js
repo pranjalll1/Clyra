@@ -1,3 +1,4 @@
+// Unit IV: Database Integration - Mongoose ODM Schema & Data Validation
 import mongoose from 'mongoose';
 
 export const ROLES = ['student', 'organizer', 'admin'];

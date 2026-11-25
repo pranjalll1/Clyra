@@ -1,3 +1,4 @@
+// Unit IV: Database Integration - Mongoose ODM Schema & Field Validations
 import mongoose from 'mongoose';
 
 const { Schema } = mongoose;
