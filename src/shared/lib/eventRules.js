@@ -2,6 +2,15 @@ import { z } from 'zod';
 
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'Invalid id');
 const date = z.coerce.date().nullable();
+const isSafeImageSrc = (v) =>
+  /^\/(?!\/)[^\s]+$/.test(v) ||
+  /^https?:\/\/[^\s]+$/i.test(v) ||
+  /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/.test(v);
+const imageSrc = z
+  .string()
+  .max(450000, 'Image is too large')
+  .refine(isSafeImageSrc, 'Invalid image format');
+const emptyToNull = (schema) => z.preprocess((v) => (v === '' ? null : v), schema);
 
 const base = z
   .object({
@@ -9,6 +18,9 @@ const base = z
     organizationId: objectId,
     categoryId: objectId.nullable(),
     description: z.string().max(10000),
+    posterUrl: emptyToNull(imageSrc.nullable()),
+    posterAlt: emptyToNull(z.string().trim().max(160).nullable()),
+    photos: z.array(imageSrc).max(6, 'Upload at most 6 additional photos'),
     mode: z.enum(['in_person', 'online', 'hybrid']),
     venueId: objectId.nullable(),
     startAt: date,
@@ -70,6 +82,9 @@ export function toDto(e) {
     categoryId: ref(e.categoryId),
     categoryName: e.categoryId?.name ?? null,
     description: e.description,
+    posterUrl: e.posterUrl ?? null,
+    posterAlt: e.posterAlt ?? null,
+    photos: Array.isArray(e.photos) ? e.photos : [],
     mode: e.mode,
     venueId: ref(e.venueId),
     venueName: e.venueId?.name ?? null,
@@ -171,6 +186,7 @@ export function toDetailDto(e) {
   return {
     ...toCardDto(e),
     description: e.description,
+    photos: Array.isArray(e.photos) ? e.photos : [],
     venueType: e.venueId?.type ?? null,
     venueCapacity: e.venueId?.capacity ?? null,
     waitlistEnabled: e.waitlistEnabled,

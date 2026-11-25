@@ -134,6 +134,24 @@ export default function EventDetail() {
             <h2 className="font-syne text-2xl font-extrabold">About this event</h2>
             <p className="mt-3 whitespace-pre-line text-base leading-relaxed">{event.description || 'No description yet.'}</p>
           </div>
+
+          {event.photos?.length > 0 && (
+            <div className="card p-6">
+              <h2 className="font-syne text-2xl font-extrabold">Event photos</h2>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {event.photos.map((src, idx) => (
+                  <div key={idx} className="aspect-[16/9] overflow-hidden border-[1.5px] border-onyx bg-surface-muted">
+                    <img
+                      src={src}
+                      alt={`${event.title} photo ${idx + 1}`}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* RIGHT: title and registration */}

@@ -25,6 +25,7 @@ const eventSchema = new Schema(
     description: { type: String, default: '', maxlength: 10000 }, // markdown
     posterUrl: String,
     posterAlt: String,
+    photos: { type: [String], default: [] },
     mode: { type: String, enum: ['in_person', 'online', 'hybrid'], default: 'in_person' },
     venueId: { type: Schema.Types.ObjectId, ref: 'Venue', default: null },
     startAt: { type: Date, default: null },

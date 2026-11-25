@@ -3,9 +3,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { api, ApiError } from '@/lib/api';
+import { compressImageFile } from '@/lib/imageUpload';
 
 const EMPTY = {
-  title: '', organizationId: '', categoryId: '', description: '', mode: 'in_person', venueId: '',
+  title: '', organizationId: '', categoryId: '', description: '', posterUrl: '', posterAlt: '', photos: [],
+  mode: 'in_person', venueId: '',
   startAt: '', endAt: '', capacity: '', waitlistEnabled: true, waitlistCapPercent: 5,
   registrationOpensAt: '', registrationClosesAt: '', isFree: true, amountINR: 0,
 };
@@ -22,7 +24,9 @@ const rangeFmt = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'shor
 const formatRange = (a, b) => `${rangeFmt.format(new Date(a))} to ${rangeFmt.format(new Date(b))}`;
 
 const fromDto = (e) => ({
-  title: e.title, organizationId: e.organizationId, categoryId: e.categoryId || '', description: e.description || '', mode: e.mode,
+  title: e.title, organizationId: e.organizationId, categoryId: e.categoryId || '', description: e.description || '',
+  posterUrl: e.posterUrl || '', posterAlt: e.posterAlt || '', photos: Array.isArray(e.photos) ? e.photos : [],
+  mode: e.mode,
   venueId: e.venueId || '', startAt: toInput(e.startAt), endAt: toInput(e.endAt), capacity: e.capacity ?? '',
   waitlistEnabled: e.waitlistEnabled, waitlistCapPercent: e.waitlistCapPercent,
   registrationOpensAt: toInput(e.registrationOpensAt), registrationClosesAt: toInput(e.registrationClosesAt),
@@ -31,7 +35,9 @@ const fromDto = (e) => ({
 
 const toPayload = (f, { create }) => ({
   ...(create ? { organizationId: f.organizationId } : {}),
-  title: f.title.trim(), categoryId: f.categoryId || null, description: f.description, mode: f.mode, venueId: f.venueId || null,
+  title: f.title.trim(), categoryId: f.categoryId || null, description: f.description,
+  posterUrl: f.posterUrl || null, posterAlt: f.posterAlt.trim() || null, photos: f.photos || [],
+  mode: f.mode, venueId: f.venueId || null,
   startAt: toIso(f.startAt), endAt: toIso(f.endAt), capacity: f.capacity === '' ? null : Number(f.capacity),
   waitlistEnabled: f.waitlistEnabled, waitlistCapPercent: Number(f.waitlistCapPercent) || 0,
   registrationOpensAt: toIso(f.registrationOpensAt), registrationClosesAt: toIso(f.registrationClosesAt),
@@ -61,7 +67,13 @@ export default function EventForm({ eventId }) {
   const [info, setInfo] = useState({ code: '', status: 'draft', rejectionNote: null });
     const [submitting, setSubmitting] = useState(false);
   const [submitMsg, setSubmitMsg] = useState('');
-    const [slot, setSlot] = useState(null); // null | { checking: true } | { clash, conflicts }
+  const [slot, setSlot] = useState(null); // null | { checking: true } | { clash, conflicts }
+  const [mediaBusy, setMediaBusy] = useState(false);
+  const [mediaErr, setMediaErr] = useState('');
+  const posterInputRef = useRef(null);
+  const photoAddRef = useRef(null);
+  const photoReplaceRef = useRef(null);
+  const replacingPhotoIdx = useRef(null);
   const dirty = useRef(false);
   const timer = useRef(null);
 
@@ -92,6 +104,80 @@ export default function EventForm({ eventId }) {
 
   const formRef = useRef(form);
   formRef.current = form;
+
+  async function onPosterFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setMediaErr('');
+    setMediaBusy(true);
+    try {
+      const dataUrl = await compressImageFile(file, { maxDimension: 1200, maxLength: 380000 });
+      change({ posterUrl: dataUrl });
+    } catch (err) {
+      setMediaErr(err.message || 'Could not process poster image.');
+    } finally {
+      setMediaBusy(false);
+    }
+  }
+
+  function removePoster() {
+    setMediaErr('');
+    change({ posterUrl: '', posterAlt: '' });
+  }
+
+  async function onAddPhotos(e) {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (!files.length) return;
+    const remaining = Math.max(0, 6 - (formRef.current.photos?.length || 0));
+    if (remaining === 0) {
+      setMediaErr('You can upload up to 6 additional photos.');
+      return;
+    }
+    setMediaErr('');
+    setMediaBusy(true);
+    try {
+      const added = [];
+      for (const file of files.slice(0, remaining)) {
+        added.push(await compressImageFile(file, { maxDimension: 1000, maxLength: 260000 }));
+      }
+      change({ photos: [...(formRef.current.photos || []), ...added] });
+      if (files.length > remaining) {
+        setMediaErr(`Added ${added.length} photo${added.length === 1 ? '' : 's'}. Maximum is 6.`);
+      }
+    } catch (err) {
+      setMediaErr(err.message || 'Could not process one of the selected photos.');
+    } finally {
+      setMediaBusy(false);
+    }
+  }
+
+  async function onReplacePhoto(e) {
+    const file = e.target.files?.[0];
+    const idx = replacingPhotoIdx.current;
+    replacingPhotoIdx.current = null;
+    e.target.value = '';
+    if (!file || idx === null || idx < 0) return;
+    setMediaErr('');
+    setMediaBusy(true);
+    try {
+      const dataUrl = await compressImageFile(file, { maxDimension: 1000, maxLength: 260000 });
+      const next = [...(formRef.current.photos || [])];
+      next[idx] = dataUrl;
+      change({ photos: next });
+    } catch (err) {
+      setMediaErr(err.message || 'Could not process replacement photo.');
+    } finally {
+      setMediaBusy(false);
+    }
+  }
+
+  function removePhoto(idx) {
+    setMediaErr('');
+    const next = (formRef.current.photos || []).filter((_, i) => i !== idx);
+    change({ photos: next });
+  }
 
    async function save() {
     clearTimeout(timer.current);
@@ -206,6 +292,145 @@ export default function EventForm({ eventId }) {
             <Field id="description" error={err('description')} label="Description" hint="Markdown is supported. Say what happens, who it is for and what to bring.">
               <textarea id="description" rows={7} className={cls('description')} value={form.description} onChange={set('description')} {...aria('description')} />
             </Field>
+          </fieldset>
+
+          <fieldset className="card space-y-5 p-5 shadow-tactile">
+            <legend className="sticker -ml-1">Poster and photos</legend>
+
+            <div>
+              <p className="label-caps">Event poster (optional)</p>
+              <p className="mt-1 text-sm text-ink-muted">Shown on student event cards and the event detail page. PNG, JPG or WebP.</p>
+              <input
+                ref={posterInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={onPosterFile}
+                disabled={(!editable && !!eventId) || mediaBusy}
+                className="sr-only"
+                aria-label="Choose event poster image"
+              />
+              {form.posterUrl ? (
+                <div className="mt-3 space-y-4">
+                  <div className="aspect-[16/9] max-w-md overflow-hidden border-[1.5px] border-onyx bg-surface-muted">
+                    <img src={form.posterUrl} alt={form.posterAlt || 'Event poster preview'} className="h-full w-full object-cover" />
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={() => posterInputRef.current?.click()}
+                      disabled={(!editable && !!eventId) || mediaBusy}
+                      className="btn-ghost"
+                    >
+                      {mediaBusy ? 'Processing...' : 'Replace poster'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={removePoster}
+                      disabled={(!editable && !!eventId) || mediaBusy}
+                      className="btn-ghost text-coral-dark"
+                    >
+                      Remove poster
+                    </button>
+                  </div>
+                  <Field id="posterAlt" error={err('posterAlt')} label="Poster alt text (optional)" hint="Short description for screen readers.">
+                    <input
+                      id="posterAlt"
+                      className={cls('posterAlt')}
+                      value={form.posterAlt}
+                      onChange={set('posterAlt')}
+                      maxLength={160}
+                      placeholder="e.g. Illustrated hackathon banner with date and venue"
+                      {...aria('posterAlt')}
+                    />
+                  </Field>
+                </div>
+              ) : (
+                <div className="mt-3 border-[1.5px] border-dashed border-onyx bg-surface-muted p-5 text-center">
+                  <button
+                    type="button"
+                    onClick={() => posterInputRef.current?.click()}
+                    disabled={(!editable && !!eventId) || mediaBusy}
+                    className="btn-primary"
+                  >
+                    {mediaBusy ? 'Processing...' : 'Upload poster'}
+                  </button>
+                </div>
+              )}
+              {err('posterUrl') && <p className="mt-2 text-sm font-semibold text-coral-dark">{err('posterUrl')}</p>}
+            </div>
+
+            <div className="border-t border-onyx/20 pt-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="label-caps">Additional event photos (optional)</p>
+                  <p className="mt-1 text-sm text-ink-muted">Up to 6 extra photos shown in the gallery on the event page ({form.photos.length}/6).</p>
+                </div>
+                {form.photos.length < 6 && (
+                  <button
+                    type="button"
+                    onClick={() => photoAddRef.current?.click()}
+                    disabled={(!editable && !!eventId) || mediaBusy}
+                    className="btn-ghost"
+                  >
+                    {mediaBusy ? 'Processing...' : 'Add photos'}
+                  </button>
+                )}
+              </div>
+              <input
+                ref={photoAddRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                multiple
+                onChange={onAddPhotos}
+                disabled={(!editable && !!eventId) || mediaBusy}
+                className="sr-only"
+                aria-label="Add additional event photos"
+              />
+              <input
+                ref={photoReplaceRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={onReplacePhoto}
+                disabled={(!editable && !!eventId) || mediaBusy}
+                className="sr-only"
+                aria-label="Replace event photo"
+              />
+              {form.photos.length > 0 && (
+                <div className="mt-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+                  {form.photos.map((src, idx) => (
+                    <div key={idx} className="border-[1.5px] border-onyx bg-surface-muted">
+                      <div className="aspect-[16/9] overflow-hidden border-b border-onyx">
+                        <img src={src} alt={`Additional event photo ${idx + 1}`} className="h-full w-full object-cover" />
+                      </div>
+                      <div className="flex items-center justify-between gap-2 p-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            replacingPhotoIdx.current = idx;
+                            photoReplaceRef.current?.click();
+                          }}
+                          disabled={(!editable && !!eventId) || mediaBusy}
+                          className="font-mono text-xs font-bold uppercase tracking-wider underline underline-offset-4 disabled:opacity-50"
+                        >
+                          Replace
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removePhoto(idx)}
+                          disabled={(!editable && !!eventId) || mediaBusy}
+                          className="font-mono text-xs font-bold uppercase tracking-wider text-coral-dark underline underline-offset-4 disabled:opacity-50"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {err('photos') && <p className="mt-2 text-sm font-semibold text-coral-dark">{err('photos')}</p>}
+            </div>
+
+            {mediaErr && <p role="alert" className="border-[1.5px] border-onyx bg-coral-light px-3 py-2 text-sm font-semibold text-coral-dark">{mediaErr}</p>}
           </fieldset>
 
           <fieldset className="card space-y-5 p-5 shadow-tactile">
