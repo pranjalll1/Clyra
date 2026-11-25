@@ -45,8 +45,16 @@ export async function clashCheckVenue(venueId, searchParams) {
     return jsonError('Invalid venue ID provided', 400, { code: 'BAD_QUERY' });
   }
 
-  const startAt = new Date(searchParams.get('startAt'));
-  const endAt = new Date(searchParams.get('endAt'));
+  const rawStart = searchParams.get('startAt')?.trim();
+  const rawEnd = searchParams.get('endAt')?.trim();
+  if (!rawStart || !rawEnd) {
+    return jsonError('Please provide both startAt and endAt query parameters', 400, {
+      code: 'BAD_QUERY',
+    });
+  }
+
+  const startAt = new Date(rawStart);
+  const endAt = new Date(rawEnd);
 
   // Validate start and end timestamps
   const isStartTimeValid = !Number.isNaN(startAt.getTime());
