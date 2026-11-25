@@ -11,6 +11,10 @@ export function overlaps(aStart, aEnd, bStart, bEnd) {
   const bStartTime = new Date(bStart).getTime();
   const bEndTime = new Date(bEnd).getTime();
 
+  if (Number.isNaN(aStartTime) || Number.isNaN(aEndTime) || Number.isNaN(bStartTime) || Number.isNaN(bEndTime)) {
+    return false;
+  }
+
   // Overlap condition: A starts before B ends, AND A ends after B starts
   return aStartTime < bEndTime && aEndTime > bStartTime;
 }
@@ -31,8 +35,13 @@ export function peakConcurrency(intervals) {
   const timelinePoints = [];
 
   for (const event of intervals) {
-    const startTime = new Date(event.startAt).getTime();
-    const endTime = new Date(event.endAt).getTime();
+    const startTime = new Date(event?.startAt).getTime();
+    const endTime = new Date(event?.endAt).getTime();
+
+    // Skip invalid dates or zero/inverted intervals
+    if (Number.isNaN(startTime) || Number.isNaN(endTime) || endTime <= startTime) {
+      continue;
+    }
 
     timelinePoints.push({ time: startTime, change: 1 });  // event begins
     timelinePoints.push({ time: endTime, change: -1 });  // event finishes
